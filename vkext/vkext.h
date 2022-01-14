@@ -22,6 +22,7 @@ PHP_FUNCTION (vk_hello_world);
 PHP_FUNCTION (vk_upcase);
 PHP_FUNCTION (vk_utf8_to_win);
 PHP_FUNCTION (vk_win_to_utf8);
+PHP_FUNCTION (vk_json_escape);
 PHP_FUNCTION (vk_flex);
 PHP_FUNCTION (vk_json_encode);
 PHP_FUNCTION (vk_whitespace_pack);

@@ -10,6 +10,8 @@ string f$vk_utf8_to_win(const string &text, int64_t max_len = 0, bool exit_on_er
 
 string f$vk_win_to_utf8(const string &text, bool escape = true);
 
+string f$vk_json_escape(const string &text);
+
 string f$vk_flex(const string &name, const string &case_name, int64_t sex, const string &type, int64_t lang_id = 0);
 
 string f$vk_whitespace_pack(const string &str, bool html_opt = false);
