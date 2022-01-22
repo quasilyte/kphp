@@ -571,47 +571,6 @@ int win_to_utf8(const char *s, int len, bool escape) {
   return cur_buff_len;
 }
 
-static int json_escape(const char *string, int len) {
-  for (size_t i = 0; i < len; ++i) {
-    if (string[i] == '&') {
-      if (i + 5 < len && string[i + 1] == 'q' && string[i + 2] == 'u' && string[i + 3] == 'o' && string[i + 4] == 't' && string[i + 5] == ';') {
-        write_buff_char_2('\\', '"');
-        i += 5;
-      } else if (i + 4 < len && string[i + 1] == 's' && string[i + 2] == 'h' && string[i + 3] == 'y' && string[i + 4] == ';') {
-        i += 4;
-      } else if (i + 4 < len && string[i + 1] == '#' && string[i + 4] == ';') {
-        int num = (string[i + 2] - '0') * 10 + (string[i + 3] - '0');
-        if (num == 13) {
-          write_buff_char_2('\\', 'r');
-        } else if (num == 33 || num == 36 || num == 39) {
-          write_buff_char(num);
-        } else if (num == 34) {
-          write_buff_char_2('\\', num);
-        } else if (num == 92) {
-          write_buff_char_4('\\', '\\', '\\', '\\');
-        }
-        i += 4;
-      } else {
-        write_buff_char(string[i]);
-      }
-    } else if (string[i] == '<') {
-      bool obr_tag = i + 3 < len && string[i + 1] == 'b' && string[i + 2] == 'r' && string[i + 3] == '>';
-      bool ebr_tag = i + 4 < len && string[i + 1] == '/' && string[i + 2] == 'b' && string[i + 3] == 'r' && string[i + 4] == '>';
-      if (obr_tag || ebr_tag) {
-        write_buff_char(' ');
-        i += obr_tag ? 3 : 4;
-      } else {
-        write_buff_char(string[i]);
-      }
-    } else if (string[i] == '\t') {
-      write_buff_char('\n');
-    } else {
-      write_buff_char(string[i]);
-    }
-  }
-  return cur_buff_len;
-}
-
 void print_backtrace() {
   void *buffer[64];
   int nptrs = backtrace(buffer, 64);
@@ -700,21 +659,6 @@ PHP_FUNCTION (vk_win_to_utf8) {
   }
   init_buff(0);
   win_to_utf8(text, text_len, escape);
-  write_buff_char(0);
-  char *res = finish_buff();
-  char *new_res = estrdup (res);
-  free_buff();
-  VK_RETURN_STRING_NOD (new_res);
-}
-
-PHP_FUNCTION (vk_json_escape) {
-  char *text;
-  long text_len = 0;
-  if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &text, &text_len) == FAILURE) {
-    return;
-  }
-  init_buff(0);
-  json_escape(text, text_len);
   write_buff_char(0);
   char *res = finish_buff();
   char *new_res = estrdup (res);

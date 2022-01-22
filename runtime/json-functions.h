@@ -6,6 +6,7 @@
 
 #include "runtime/exception.h"
 #include "runtime/kphp_core.h"
+#include "string_functions.h"
 
 constexpr int64_t JSON_UNESCAPED_UNICODE = 1;
 constexpr int64_t JSON_FORCE_OBJECT = 16;
@@ -128,6 +129,23 @@ string f$vk_json_encode_safe(const T &v, bool simple_encode = true) noexcept {
   }
   string_buffer::string_buffer_error_flag = STRING_BUFFER_ERROR_FLAG_OFF;
   return static_SB.str();
+}
+
+string json_string_win_to_utf(const char *win_str) noexcept;
+
+template<typename T>
+Optional<string> f$vk_json_encode_utf8(const T &value, const array<string> &search = array<string>(), const array<string> &replace = array<string>()) noexcept {
+  static_SB.clean();
+  if (unlikely(!impl_::JsonEncoder(0, false).encode(value))) {
+    return false;
+  }
+  if (!search.empty()) {
+    int64_t replace_count = 0;
+    string prepared_string = str_replace_string_array(search, replace, static_SB.str(), replace_count, true);
+    return json_string_win_to_utf(prepared_string.buffer());
+  }
+
+  return json_string_win_to_utf(static_SB.buffer());
 }
 
 template<class T>

@@ -463,47 +463,6 @@ static int win_to_utf8(const char *s, int len, bool escape) {
   return cur_buff_len;
 }
 
-static int json_escape(const char *s, int len) {
-  for (size_t i = 0; i < len; ++i) {
-    if (s[i] == '&') {
-      if (i + 5 < len && s[i + 1] == 'q' && s[i + 2] == 'u' && s[i + 3] == 'o' && s[i + 4] == 't' && s[i + 5] == ';') {
-        write_buff_char_2('\\', '"');
-        i += 5;
-      } else if (i + 4 < len && s[i + 1] == 's' && s[i + 2] == 'h' && s[i + 3] == 'y' && s[i + 4] == ';') {
-        i += 4;
-      } else if (i + 4 < len && s[i + 1] == '#' && s[i + 4] == ';') {
-        int num = (s[i + 2] - '0') * 10 + (s[i + 3] - '0');
-        if (num == 13) {
-          write_buff_char_2('\\', 'r');
-        } else if (num == 33 || num == 36 || num == 39) {
-          write_buff_char(num);
-        } else if (num == 34) {
-          write_buff_char_2('\\', num);
-        } else if (num == 92) {
-          write_buff_char_4('\\', '\\', '\\', '\\');
-        }
-        i += 4;
-      } else {
-        write_buff_char(s[i]);
-      }
-    } else if (s[i] == '<') {
-      bool obr_tag = i + 3 < len && s[i + 1] == 'b' && s[i + 2] == 'r' && s[i + 3] == '>';
-      bool ebr_tag = i + 4 < len && s[i + 1] == '/' && s[i + 2] == 'b' && s[i + 3] == 'r' && s[i + 4] == '>';
-      if (obr_tag || ebr_tag) {
-        write_buff_char(' ');
-        i += obr_tag ? 3 : 4;
-      } else {
-        write_buff_char(s[i]);
-      }
-    } else if (s[i] == '\t') {
-      write_buff_char('\n');
-    } else {
-      write_buff_char(s[i]);
-    }
-  }
-  return cur_buff_len;
-}
-
 char ws[256] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
 
 static inline bool is_html_opt_symb(char c) {
@@ -551,12 +510,6 @@ string f$vk_utf8_to_win(const string &text, int64_t max_len, bool exit_on_error)
 string f$vk_win_to_utf8(const string &text, bool escape) {
   init_buff();
   win_to_utf8(text.c_str(), text.size(), escape);
-  return finish_buff(0);
-}
-
-string f$vk_json_escape(const string &text) {
-  init_buff();
-  json_escape(text.c_str(), text.size());
   return finish_buff(0);
 }
 
