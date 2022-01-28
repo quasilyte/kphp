@@ -136,15 +136,22 @@ string json_string_win_to_utf(const char *win_str) noexcept;
 template<typename T>
 Optional<string> f$vk_json_encode_utf8(const T &value, const array<string> &search = array<string>(), const array<string> &replace = array<string>()) noexcept {
   static_SB.clean();
-  if (unlikely(!impl_::JsonEncoder(0, false).encode(value))) {
-    return false;
+  string_buffer::string_buffer_error_flag = STRING_BUFFER_ERROR_FLAG_ON;
+  impl_::JsonEncoder(0, true).encode(value);
+  if (unlikely(string_buffer::string_buffer_error_flag == STRING_BUFFER_ERROR_FLAG_FAILED)) {
+    static_SB.clean();
+    string_buffer::string_buffer_error_flag = STRING_BUFFER_ERROR_FLAG_OFF;
+    THROW_EXCEPTION (new_Exception(string(__FILE__), __LINE__, string("json_encode buffer overflow", 27)));
+    return string();
   }
+
   if (!search.empty()) {
     int64_t replace_count = 0;
     string prepared_string = str_replace_string_array(search, replace, static_SB.str(), replace_count, true);
     return json_string_win_to_utf(prepared_string.buffer());
   }
 
+  string_buffer::string_buffer_error_flag = STRING_BUFFER_ERROR_FLAG_OFF;
   return json_string_win_to_utf(static_SB.buffer());
 }
 
