@@ -16,26 +16,75 @@ public:
 
   template<typename T>
   void operator()(std::string_view key, const T &value) {
-    process_impl(key, value);
+    writer_.Key(key.data(), key.size());
+    process_impl(value);
   }
 
 private:
   template<class T>
-  void process_impl(std::string_view key, const T &value) {
-    writer_.Key(key.data(), key.size());
+  void process_impl(const T &value) {
     add_value(value);
   }
 
   template<typename T>
-  void process_impl(std::string_view key, const Optional<T> &value) {
-    auto process_impl_lambda = [this, key](const auto &val) { return this->process_impl(key, val); };
+  void process_impl(const Optional<T> &value) {
+    auto process_impl_lambda = [this](const auto &val) { return this->process_impl(val); };
     call_fun_on_optional_value(process_impl_lambda, value);
   }
 
   template<class I>
-  void process_impl(std::string_view key, const class_instance<I> &instance) {
-    writer_.Key(key.data(), key.size());
+  void process_impl(const class_instance<I> &instance) {
     to_json_impl(instance, with_class_names_, writer_);
+  }
+
+  template<class T>
+  void process_vector(const array<T> &array) {
+    writer_.StartArray();
+    for (const auto &elem : array) {
+      process_impl(elem.get_value());
+    }
+    writer_.EndArray();
+  }
+
+  template<class T>
+  void process_map(const array<T> &array) {
+    writer_.StartObject();
+    for (const auto &elem : array) {
+      const auto &key = elem.is_string_key() ? elem.get_string_key() : string{elem.get_int_key()};
+      (*this)({key.c_str(), key.size()}, elem.get_value());
+    }
+    writer_.EndObject();
+  }
+
+  template<class T>
+  void process_impl(const array<T> &array) {
+    array.is_vector() ? process_vector(array) : process_map(array);
+  }
+
+  // support of array<Unknown> compilation
+  void process_impl(const Unknown &/*elem*/) {}
+
+  void process_impl(const mixed &value) {
+    switch (value.get_type()) {
+      case mixed::type::NUL:
+        add_null_value();
+        break;
+      case mixed::type::BOOLEAN:
+        add_value(value.as_bool());
+        break;
+      case mixed::type::INTEGER:
+        add_value(value.as_int());
+        break;
+      case mixed::type::FLOAT:
+        add_value(value.as_double());
+        break;
+      case mixed::type::STRING:
+        add_value(value.as_string());
+        break;
+      case mixed::type::ARRAY:
+        process_impl(value.as_array());
+        break;
+    }
   }
 
   void add_value(const string &value) {
@@ -56,29 +105,6 @@ private:
 
   void add_null_value() {
     writer_.Null();
-  }
-
-  void add_value(const mixed &value) {
-    switch(value.get_type()) {
-      case mixed::type::NUL :
-        add_null_value();
-        break;
-      case mixed::type::BOOLEAN:
-        add_value(value.as_bool());
-        break;
-      case mixed::type::INTEGER:
-        add_value(value.as_int());
-        break;
-      case mixed::type::FLOAT:
-        add_value(value.as_double());
-        break;
-      case mixed::type::STRING:
-        add_value(value.as_string());
-        break;
-      case mixed::type::ARRAY:
-        add_value(value.as_array());
-        break;
-    }
   }
 
   bool with_class_names_{false};
