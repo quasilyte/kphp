@@ -54,6 +54,33 @@ private:
     writer_.Double(value);
   }
 
+  void add_null_value() {
+    writer_.Null();
+  }
+
+  void add_value(const mixed &value) {
+    switch(value.get_type()) {
+      case mixed::type::NUL :
+        add_null_value();
+        break;
+      case mixed::type::BOOLEAN:
+        add_value(value.as_bool());
+        break;
+      case mixed::type::INTEGER:
+        add_value(value.as_int());
+        break;
+      case mixed::type::FLOAT:
+        add_value(value.as_double());
+        break;
+      case mixed::type::STRING:
+        add_value(value.as_string());
+        break;
+      case mixed::type::ARRAY:
+        add_value(value.as_array());
+        break;
+    }
+  }
+
   bool with_class_names_{false};
   rapidjson::Writer<rapidjson::StringBuffer> &writer_;
 };
