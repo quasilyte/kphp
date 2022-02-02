@@ -1273,6 +1273,8 @@ function instance_to_array($instance ::: any, $with_class_names ::: bool = false
 function to_array_debug(any $instance, bool $with_class_names = false) ::: mixed[];
 
 function to_json(any $instance, bool $with_class_names = false) ::: string;
+/** @kphp-extern-func-info cpp_template_call */
+function from_json(string $json, string $class_name) ::: instance<^2>;
 
 /** Instance cache interface (like APC) **/
 /** @kphp-extern-func-info cpp_template_call */

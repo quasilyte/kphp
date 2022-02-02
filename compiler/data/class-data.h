@@ -67,7 +67,7 @@ public:
   std::string src_name, header_name;
 
   std::atomic<bool> need_to_array_debug_visitor{false};
-  std::atomic<bool> need_to_json_visitor{false};
+  std::atomic<bool> need_json_visitors{false};
   std::atomic<bool> need_instance_cache_visitors{false};
   std::atomic<bool> need_instance_memory_estimate_visitor{false};
   std::atomic<bool> need_virtual_builtin_functions{false};
@@ -179,7 +179,7 @@ public:
   void mark_as_used();
 
   void deeply_require_to_array_debug_visitor();
-  void deeply_require_to_json_visitor();
+  void deeply_require_json_visitors();
   void deeply_require_instance_cache_visitor();
   void deeply_require_instance_memory_estimate_visitor();
   void deeply_require_virtual_builtin_functions();

@@ -406,8 +406,8 @@ void ClassData::deeply_require_to_array_debug_visitor() {
   set_atomic_field_deeply<&ClassData::need_to_array_debug_visitor>();
 }
 
-void ClassData::deeply_require_to_json_visitor() {
-  set_atomic_field_deeply<&ClassData::need_to_json_visitor>();
+void ClassData::deeply_require_json_visitors() {
+  set_atomic_field_deeply<&ClassData::need_json_visitors>();
 }
 
 void ClassData::deeply_require_instance_cache_visitor() {

@@ -112,7 +112,15 @@ void check_to_json_call(VertexAdaptor<op_func_call> call) {
   kphp_error_return(type->ptype() == tp_Class, "Argument of to_json() should a class type");
   const auto klass = type->class_type();
   kphp_error(!klass->is_ffi_cdata(), "Called to_json() with CData");
-  klass->deeply_require_to_json_visitor();
+  klass->deeply_require_json_visitors();
+}
+
+void check_from_json_call(VertexAdaptor<op_func_call> call) {
+  const auto *type = tinf::get_type(call);
+  kphp_assert(type->ptype() == tp_Class);
+  const auto klass = type->class_type();
+  kphp_error(!klass->is_ffi_cdata(), "Called from_json() with CData");
+  klass->deeply_require_json_visitors();
 }
 
 void check_instance_serialize_call(VertexAdaptor<op_func_call> call) {
@@ -618,6 +626,8 @@ void FinalCheckPass::check_op_func_call(VertexAdaptor<op_func_call> call) {
       check_to_array_debug_call(call);
     } else if (function_name == "to_json") {
       check_to_json_call(call);
+    } else if (function_name == "from_json") {
+      check_from_json_call(call);
     } else if (function_name == "instance_serialize") {
       check_instance_serialize_call(call);
     } else if (function_name == "instance_deserialize") {
