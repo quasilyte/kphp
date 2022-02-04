@@ -4,12 +4,17 @@
 
 #pragma once
 
+#include <array>
+#include <string_view>
+#include <stdexcept>
+
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/pointer.h>
 
 #include "runtime/kphp_core.h"
 
+std::string_view json_type_string(rapidjson::Type type) noexcept;
 
 class FromJsonVisitor {
 public:
@@ -17,7 +22,10 @@ public:
     : json_(json) {}
 
   template<typename T>
-  void operator()(std::string_view key, T &value) {
+  void operator()(std::string_view key, T &value) noexcept {
+    if (!error_.empty()) {
+      return;
+    }
     static std::array<char, 1024> buffer = {};
     assert(key.size() < buffer.size() - 1);
 
@@ -28,28 +36,56 @@ public:
     if (!json_value || json_value->IsNull()) {
       return; //TODO: is it ok to just return when no needed key in json, or corresponding value for key is null?
     }
-    do_set(value, *json_value);
+    do_set(key, value, *json_value);
   }
 
+  bool has_error() const noexcept { return !error_.empty(); }
+  const string &get_error() const noexcept { return error_; }
+
 private:
+  void store_error_message_for(std::string_view key, const rapidjson::Value &json) noexcept {
+     error_.assign("unexpected type ");
+     error_.append(json_type_string(json.GetType()).data());
+     error_.append(" for variable '");
+     error_.append(key.data());
+     error_.append("'");
+  }
+
   template<typename T>
-  void do_set(T &value, const rapidjson::Value &json) {
+  void do_set(std::string_view key, T &value, const rapidjson::Value &json) noexcept {
+    if (!json.Is<T>()) {
+      store_error_message_for(key, json);
+      return;
+    }
     value = json.Get<T>();
   }
 
-  void do_set(string &value, const rapidjson::Value &json) {
+  void do_set(std::string_view key, string &value, const rapidjson::Value &json) noexcept {
+    if (!json.IsString()) {
+      store_error_message_for(key, json);
+      return;
+    }
     value.assign(json.GetString(), json.GetStringLength());
   }
 
   template<typename T>
-  void do_set(Optional<T> &value, const rapidjson::Value &json) {
-    do_set(value.ref(), json);
+  void do_set(std::string_view key, Optional<T> &value, const rapidjson::Value &json) noexcept {
+    do_set(key, value.ref(), json);
   }
 
   template<typename I>
-  void do_set(class_instance<I> &klass, const rapidjson::Value &json);
+  void do_set(std::string_view key, class_instance<I> &klass, const rapidjson::Value &json) noexcept;
 
-  void do_set(mixed &value, const rapidjson::Value &json) {
+  template<typename T>
+  void do_set(std::string_view key, array<T> &value, const rapidjson::Value &json) noexcept {
+    if (!json.IsArray()) {
+      store_error_message_for(key, json);
+      return;
+    }
+    (void) value;
+  }
+
+  void do_set(std::string_view /*key*/, mixed &value, const rapidjson::Value &json) noexcept {
     if (json.IsNumber()) {
       do_set_number(value, json);
     } else if (json.IsBool()) {
@@ -60,7 +96,7 @@ private:
     // TODO: add array.
   }
 
-  void do_set_number(mixed &value, const rapidjson::Value &json) {
+  void do_set_number(mixed &value, const rapidjson::Value &json) noexcept {
     if (json.IsInt64()) {
       value = json.GetInt64();
     } else {
@@ -68,11 +104,12 @@ private:
     }
   }
 
+  string error_;
   const rapidjson::Value &json_;
 };
 
 template<typename ClassName>
-ClassName from_json_impl(const rapidjson::Value &json) {
+ClassName from_json_impl(const rapidjson::Value &json) noexcept {
   ClassName instance;
   if constexpr (std::is_empty_v<typename ClassName::ClassType>) {
     instance.empty_alloc();
@@ -80,20 +117,41 @@ ClassName from_json_impl(const rapidjson::Value &json) {
     instance.alloc();
     FromJsonVisitor visitor{json};
     instance.get()->accept(visitor);
+    if (visitor.has_error()) {
+      php_warning("from_json() error: %s", visitor.get_error().c_str());
+      return {};
+    }
   }
   return instance;
 }
 
 template<typename I>
-void FromJsonVisitor::do_set(class_instance<I> &klass, const rapidjson::Value &json) {
+void FromJsonVisitor::do_set(std::string_view key, class_instance<I> &klass, const rapidjson::Value &json) noexcept {
+  if (!json.IsObject()) {
+    store_error_message_for(key, json);
+    return;
+  }
   klass = from_json_impl<class_instance<I>>(json);
 }
 
 template<typename ClassName>
-ClassName f$from_json(const string &json_string, const string &/*class_mame*/) {
+ClassName f$from_json(const string &json_string, const string &/*class_mame*/) noexcept {
   rapidjson::Document json;
   json.Parse(json_string.c_str(), json_string.size());
-  php_assert(!json.HasParseError());
-  php_assert(json.IsObject());
-  return from_json_impl<ClassName>(json.GetObject());
+
+  if (json.HasParseError()) {
+    php_warning("from_json() error: invalid json string at offset %zu: %s", json.GetErrorOffset(), GetParseError_En(json.GetParseError()));
+    return {};
+  }
+  if (!json.IsObject()) {
+    php_warning("from_json() error: root element must be an object type, got %s", json_type_string(json.GetType()).data());
+    return {};
+  }
+
+  try {
+    return from_json_impl<ClassName>(json.GetObject());
+  } catch (const std::exception &ex) {
+    php_warning("from_json() unexpected error: %s", ex.what());
+    return {};
+  }
 }
