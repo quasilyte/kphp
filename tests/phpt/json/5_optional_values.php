@@ -15,8 +15,20 @@ class OptionalTypes {
 }
 
 function test_optional_values() {
-  $obj = from_json("{}", "OptionalTypes");
+  $obj = new OptionalTypes;
+  $json = to_json($obj);
+  $restored_obj = from_json($json, "OptionalTypes");
   #ifndef KPHP
+  $restored_obj = new OptionalTypes;
+  $restored_obj->int_f = null;
+  $restored_obj->bool_f = null;
+  $restored_obj->string_f = null;
+  $restored_obj->float_f = null;
+  $restored_obj->a_f = null;
+  $restored_obj->array_f = null;
+  #endif
+  var_dump(to_array_debug($restored_obj));
+
   $obj = new OptionalTypes;
   $obj->int_f = null;
   $obj->bool_f = null;
@@ -24,23 +36,13 @@ function test_optional_values() {
   $obj->float_f = null;
   $obj->a_f = null;
   $obj->array_f = null;
-  #endif
-  var_dump(to_array_debug($obj));
-
-  $obj = from_json("{\"int_f\":null,\"bool_f\":null,\"string_f\":null,\"float_f\":null,\"a_f\":null,\"array_f\":null}", "OptionalTypes");
+  $json = to_json($obj);
+  $restored_obj = from_json($json, "OptionalTypes");
   #ifndef KPHP
-  $obj = new OptionalTypes;
-  $obj->int_f = null;
-  $obj->bool_f = null;
-  $obj->string_f = null;
-  $obj->float_f = null;
-  $obj->a_f = null;
-  $obj->array_f = null;
+  $restored_obj = $obj;
   #endif
-  var_dump(to_array_debug($obj));
+  var_dump(to_array_debug($restored_obj));
 
-  $obj = from_json("{\"int_f\":123,\"bool_f\":true,\"string_f\":\"foo\",\"float_f\":123.45,\"a_f\":{},\"array_f\":[33, 55]}", "OptionalTypes");
-  #ifndef KPHP
   $obj = new OptionalTypes;
   $obj->int_f = 123;
   $obj->bool_f = true;
@@ -48,8 +50,12 @@ function test_optional_values() {
   $obj->float_f = 123.45;
   $obj->a_f = new A;
   $obj->array_f = [33, 55];
+  $json = to_json($obj);
+  $restored_obj = from_json($json, "OptionalTypes");
+  #ifndef KPHP
+  $restored_obj = $obj;
   #endif
-  var_dump(to_array_debug($obj));
+  var_dump(to_array_debug($restored_obj));
 }
 
 test_optional_values();

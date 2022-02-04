@@ -76,24 +76,59 @@ private:
   template<typename I>
   void do_set(std::string_view key, class_instance<I> &klass, const rapidjson::Value &json) noexcept;
 
+  // just don't fail compilation with empty untyped arrays
+  void do_set(std::string_view /*key*/, array<Unknown> &/*array*/, const rapidjson::Value &/*json*/) noexcept {}
+
   template<typename T>
-  void do_set(std::string_view key, array<T> &value, const rapidjson::Value &json) noexcept {
-    if (!json.IsArray()) {
-      store_error_message_for(key, json);
-      return;
+  void do_set_vector(std::string_view key, array<T> &array, const rapidjson::Value &json) noexcept {
+    array.reserve(json.Size(), 0, true);
+
+    for (const auto &json_elem : json.GetArray()) {
+      auto &elem = array.emplace_back(); // create value anyway despite that json value may be null
+      if (!json_elem.IsNull()) {
+        do_set(key, elem, json_elem);
+      }
     }
-    (void) value;
   }
 
-  void do_set(std::string_view /*key*/, mixed &value, const rapidjson::Value &json) noexcept {
+  template<typename T>
+  void do_set_map(std::string_view key, array<T> &array, const rapidjson::Value &json) noexcept {
+    array.reserve(0, json.MemberCount(), false);
+
+    for (const auto &[json_key, json_elem] : json.GetObject()) {
+      const auto json_key_str = string{json_key.GetString(), json_key.GetStringLength()};
+      auto &elem = array[json_key_str]; // create value anyway despite that json value may be null
+      if (!json_elem.IsNull()) {
+        do_set(key, elem, json_elem);
+      }
+    }
+  }
+
+  template<typename T>
+  void do_set(std::string_view key, array<T> &array, const rapidjson::Value &json) noexcept {
+    if (json.IsObject()) {
+      do_set_map(key, array, json);
+    } else if (json.IsArray()) {
+      do_set_vector(key, array, json);
+    } else {
+      store_error_message_for(key, json);
+    }
+  }
+
+  void do_set(std::string_view key, mixed &value, const rapidjson::Value &json) noexcept {
     if (json.IsNumber()) {
       do_set_number(value, json);
     } else if (json.IsBool()) {
       value = json.GetBool();
     } else if (json.IsString()) {
       value.assign(json.GetString(), json.GetStringLength());
+    } else if (json.IsArray() || json.IsObject()) {
+      array<mixed> array;
+      do_set(key, array, json);
+      value = std::move(array);
+    } else {
+      store_error_message_for(key, json);
     }
-    // TODO: add array.
   }
 
   void do_set_number(mixed &value, const rapidjson::Value &json) noexcept {
@@ -141,6 +176,9 @@ ClassName f$from_json(const string &json_string, const string &/*class_mame*/) n
 
   if (json.HasParseError()) {
     php_warning("from_json() error: invalid json string at offset %zu: %s", json.GetErrorOffset(), GetParseError_En(json.GetParseError()));
+    return {};
+  }
+  if (json.IsNull()) {
     return {};
   }
   if (!json.IsObject()) {
