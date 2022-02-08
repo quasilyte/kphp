@@ -10,7 +10,9 @@
 
 class ToJsonVisitor {
 public:
-  ToJsonVisitor(rapidjson::Writer<rapidjson::StringBuffer> &writer, bool with_class_names) noexcept
+  using JsonWriter = rapidjson::Writer<rapidjson::StringBuffer, rapidjson::UTF8<>, rapidjson::UTF8<>, rapidjson::CrtAllocator, rapidjson::kWriteNanAndInfFlag>;
+
+  ToJsonVisitor(JsonWriter &writer, bool with_class_names) noexcept
     : with_class_names_(with_class_names)
     , writer_(writer) {}
 
@@ -108,11 +110,11 @@ private:
   }
 
   bool with_class_names_{false};
-  rapidjson::Writer<rapidjson::StringBuffer> &writer_;
+  JsonWriter &writer_;
 };
 
 template<class T>
-void to_json_impl(const class_instance<T> &klass, bool with_class_names, rapidjson::Writer<rapidjson::StringBuffer> &writer) {
+void to_json_impl(const class_instance<T> &klass, bool with_class_names, ToJsonVisitor::JsonWriter &writer) {
   if (klass.is_null()) {
     writer.Null();
     return;
@@ -135,7 +137,7 @@ void to_json_impl(const class_instance<T> &klass, bool with_class_names, rapidjs
 template<class T>
 string f$to_json(const class_instance<T> &klass, bool with_class_names = false) {
   rapidjson::StringBuffer buffer;
-  rapidjson::Writer<rapidjson::StringBuffer> writer{buffer};
+  ToJsonVisitor::JsonWriter writer{buffer};
   to_json_impl(klass, with_class_names, writer);
   php_assert(writer.IsComplete());
   return {buffer.GetString(), static_cast<std::uint32_t>(buffer.GetSize())};

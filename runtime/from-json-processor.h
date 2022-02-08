@@ -172,7 +172,7 @@ void FromJsonVisitor::do_set(std::string_view key, class_instance<I> &klass, con
 template<typename ClassName>
 ClassName f$from_json(const string &json_string, const string &/*class_mame*/) noexcept {
   rapidjson::Document json;
-  json.Parse(json_string.c_str(), json_string.size());
+  json.Parse<rapidjson::ParseFlag::kParseNanAndInfFlag>(json_string.c_str(), json_string.size());
 
   if (json.HasParseError()) {
     php_warning("from_json() error: invalid json string at offset %zu: %s", json.GetErrorOffset(), GetParseError_En(json.GetParseError()));
