@@ -607,16 +607,25 @@ void ClassDeclaration::compile_accept_visitor_methods(CodeGenerator &W, ClassPtr
     return;
   }
 
-  W << NL;
+  W << "template<class Visitor, class... Args>" << NL
+    << "void generic_accept(Visitor &&visitor, const Args &...args) noexcept {" << NL
+    << "  (std::apply(visitor, args), ...);" << NL
+    << "}" << NL << NL;
+
   FunctionSignatureGenerator(W) << "template<class Visitor>" << NL
                                 << "void generic_accept(Visitor &&visitor) " << BEGIN;
+  W << "generic_accept(visitor";
+  W << Indent{2};
+
   for (auto cur_klass = klass; cur_klass; cur_klass = cur_klass->parent_class) {
-    cur_klass->members.for_each([&W](const ClassMemberInstanceField &f) {
-      // will generate visitor("field_name", $field_name);
-      W << "visitor(\"" << f.local_name() << "\", $" << f.local_name() << ");" << NL;
+    cur_klass->members.for_each([&W](const ClassMemberInstanceField &field) {
+      W << "," << NL;
+      W << "std::tie(\"" << field.local_name() << "\", $" << field.local_name() << ")";
     });
   }
-  W << END << NL;
+
+  W << Indent{-2};
+  W << ");" << NL << END << NL;
 
   if (klass->need_to_array_debug_visitor) {
     W << NL;
