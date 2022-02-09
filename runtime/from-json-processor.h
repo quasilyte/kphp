@@ -4,13 +4,11 @@
 
 #pragma once
 
-#include <array>
 #include <string_view>
 #include <stdexcept>
 
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
-#include <rapidjson/pointer.h>
 
 #include "runtime/kphp_core.h"
 
@@ -19,30 +17,45 @@ std::string_view json_type_string(rapidjson::Type type) noexcept;
 class FromJsonVisitor {
 public:
   explicit FromJsonVisitor(const rapidjson::Value &json) noexcept
-    : json_(json) {}
+    : json_(json)
+    , current_it_(json_.MemberBegin()) {}
 
   template<typename T>
   void operator()(std::string_view key, T &value) noexcept {
     if (!error_.empty()) {
       return;
     }
-    static std::array<char, 1024> buffer = {};
-    assert(key.size() < buffer.size() - 1);
 
-    buffer.front() = '/';
-    std::memcpy(buffer.data() + 1, key.data(), key.size());
-
-    const auto *json_value = rapidjson::Pointer{buffer.data(), key.size() + 1}.Get(json_);
-    if (!json_value || json_value->IsNull()) {
-      return; //TODO: is it ok to just return when no needed key in json, or corresponding value for key is null?
+    if (const auto *json_value = find_value(key); json_value && !json_value->IsNull()) {
+      do_set(key, value, *json_value);
     }
-    do_set(key, value, *json_value);
   }
 
   bool has_error() const noexcept { return !error_.empty(); }
   const string &get_error() const noexcept { return error_; }
 
 private:
+  const rapidjson::Value *find_value_caching(std::string_view instance_key) noexcept {
+    // this method will succeed if order of keys in json object will match order of variables in kphp instance,
+    // so we can avoid linear search;
+    // the orders above always match for json produced ourselves by to_json()
+    if (current_it_ == json_.MemberEnd()) {
+      return nullptr;
+    }
+    std::string_view json_key{current_it_->name.GetString(), current_it_->name.GetStringLength()};
+    return json_key == instance_key ? &(current_it_++)->value : nullptr;
+  }
+
+  const rapidjson::Value *find_value_linear(std::string_view instance_key) noexcept {
+    // fallback for linear search just in case
+    auto value_it = json_.FindMember(instance_key.data());
+    return value_it == json_.MemberEnd() ? nullptr : &value_it->value;
+  }
+
+  const rapidjson::Value *find_value(std::string_view key) noexcept {
+    return find_value_caching(key) ?: find_value_linear(key);
+  }
+
   void store_error_message_for(std::string_view key, const rapidjson::Value &json) noexcept {
      error_.assign("unexpected type ");
      error_.append(json_type_string(json.GetType()).data());
@@ -141,6 +154,7 @@ private:
 
   string error_;
   const rapidjson::Value &json_;
+  rapidjson::Value::ConstMemberIterator current_it_;
 };
 
 template<typename ClassName>
