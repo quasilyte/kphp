@@ -52,6 +52,7 @@ inline void CheckClassesPass::analyze_class(ClassPtr klass) {
     kphp_error(!klass->parent_class || !klass->parent_class->members.has_any_instance_var(),
                "You may not serialize classes which has a parent with fields");
   }
+  fill_json_fields(klass);
 }
 
 /*
@@ -129,6 +130,23 @@ void CheckClassesPass::check_serialized_fields(ClassPtr klass) {
                       !phpdoc_tag_exists(f.phpdoc_str, php_doc_tag::kphp_serialized_float32),
                       fmt_format("kphp-serialized-field is allowed only for instance fields: {}", f.local_name()));
   });
+}
+
+void CheckClassesPass::fill_json_fields(ClassPtr klass) noexcept {
+  klass->members.for_each([&klass](ClassMemberInstanceField &field) {
+    if (auto json_field = phpdoc_find_tag_as_string(field.phpdoc_str, php_doc_tag::kphp_json_field)) {
+      field.json_field_name = vk::trim(*json_field);
+      klass->need_special_json_visitor_accept = true;
+    }
+  });
+
+  if (!klass->need_special_json_visitor_accept) {
+    return;
+  }
+
+  for (auto &derived : klass->get_all_derived_classes()) {
+    derived->need_special_json_visitor_accept = true;
+  }
 }
 
 void CheckClassesPass::fill_reserved_serialization_tags(used_serialization_tags_t &used_serialization_tags_for_fields, ClassPtr klass) {

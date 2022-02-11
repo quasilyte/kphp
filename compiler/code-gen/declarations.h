@@ -126,10 +126,14 @@ private:
   static void compile_deserialize(CodeGenerator &W, ClassPtr klass);
   static void compile_virtual_builtin_functions(CodeGenerator &W, ClassPtr klass);
 
+  static FunctionSignatureGenerator &&compile_class_method_signature(FunctionSignatureGenerator &&W, ClassPtr klass, std::string_view method_signature);
+  template<class ReturnValueT>
+  static void compile_class_method_return_value(FunctionSignatureGenerator &&W, ClassPtr klass, const ReturnValueT &return_value);
   template<class ReturnValueT>
   static void compile_class_method(FunctionSignatureGenerator &&W, ClassPtr klass, vk::string_view method_signature, const ReturnValueT &return_value);
 
   static void compile_accept_visitor(CodeGenerator &W, ClassPtr klass, const char *visitor_type);
+  static void compile_json_visitor_accept(CodeGenerator &W, ClassPtr klass, const char *visitor_type);
   IncludesCollector compile_front_includes(CodeGenerator &W) const;
   void compile_back_includes(CodeGenerator &W, IncludesCollector &&front_includes) const;
   void compile_job_worker_shared_memory_piece_methods(CodeGenerator &W, bool compile_declaration_only = false) const;

@@ -61,6 +61,7 @@ public:
   bool has_custom_constructor{false};
   bool is_serializable{false};
   bool has_job_shared_memory_piece{false};
+  bool need_special_json_visitor_accept{false};
 
   SrcFilePtr file_id;
   int location_line_num{-1};

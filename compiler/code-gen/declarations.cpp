@@ -555,8 +555,7 @@ void ClassDeclaration::compile(CodeGenerator &W) const {
   W << CloseFile();
 }
 
-template<class ReturnValueT>
-void ClassDeclaration::compile_class_method(FunctionSignatureGenerator &&W, ClassPtr klass, vk::string_view method_signature, const ReturnValueT &return_value) {
+FunctionSignatureGenerator &&ClassDeclaration::compile_class_method_signature(FunctionSignatureGenerator &&W, ClassPtr klass, std::string_view method_signature) {
   const bool has_parent = (klass->parent_class && klass->parent_class->does_need_codegen()) || vk::any_of(klass->implements, [](InterfacePtr i) { return i->does_need_codegen(); });
   const bool has_derived = !klass->derived_classes.empty();
   const bool is_overridden = has_parent && has_derived;
@@ -572,10 +571,24 @@ void ClassDeclaration::compile_class_method(FunctionSignatureGenerator &&W, Clas
 
   if (is_pure_virtual) {
     std::move(signature) << SemicolonAndNL{};
-  } else {
-    std::move(signature) << BEGIN << "return " << return_value << SemicolonAndNL{} << END << NL;
   }
-  std::move(signature) << NL;
+
+  return std::move(signature);
+}
+
+template<class ReturnValueT>
+void ClassDeclaration::compile_class_method_return_value(FunctionSignatureGenerator &&W, ClassPtr klass, const ReturnValueT &return_value) {
+  const bool is_pure_virtual = klass->class_type == ClassType::interface;
+  if (!is_pure_virtual) {
+    std::move(W) << BEGIN << "return " << return_value << SemicolonAndNL{} << END << NL;
+  }
+  std::move(W) << NL;
+}
+
+template<class ReturnValueT>
+void ClassDeclaration::compile_class_method(FunctionSignatureGenerator &&W, ClassPtr klass, vk::string_view method_signature, const ReturnValueT &return_value) {
+  auto &&generator = compile_class_method_signature(std::move(W), klass, method_signature);
+  compile_class_method_return_value(std::move(generator), klass, return_value);
 }
 
 void ClassDeclaration::compile_inner_methods(CodeGenerator &W, ClassPtr klass) {
@@ -599,6 +612,47 @@ void ClassDeclaration::compile_accept_visitor(CodeGenerator &W, ClassPtr klass, 
   compile_class_method(FunctionSignatureGenerator(W), klass, fmt_format("void accept({} &visitor)", visitor_type), "generic_accept(visitor)");
 }
 
+static void compile_generic_accept_call_args(CodeGenerator &W, ClassPtr klass, bool json_specific = false) {
+  W << Indent{2};
+
+  for (auto cur_klass = klass; cur_klass; cur_klass = cur_klass->parent_class) {
+    cur_klass->members.for_each([&W, json_specific](const ClassMemberInstanceField &field) {
+      W << "," << NL;
+      auto name = json_specific && !field.json_field_name.empty() ? field.json_field_name : field.local_name();
+      W << "std::tie(\"" <<  name << "\", $" << field.local_name() << ")";
+    });
+  }
+
+  W << Indent{-2};
+}
+
+static bool has_any_fields_in_class(ClassPtr klass) noexcept {
+  for (auto cur_klass = klass; cur_klass; cur_klass = cur_klass->parent_class) {
+    if (cur_klass->members.has_any_instance_var()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static void compile_generic_accept_call(CodeGenerator &W, ClassPtr klass) {
+  if (!has_any_fields_in_class(klass)) {
+    return;
+  }
+  FunctionSignatureGenerator(W) << "template<class Visitor>" << NL
+                                << "void generic_accept(Visitor &&visitor) " << BEGIN;
+  W << "generic_accept(visitor";
+  compile_generic_accept_call_args(W, klass, false);
+  W << ");" << NL << END << NL;
+}
+
+void ClassDeclaration::compile_json_visitor_accept(CodeGenerator &W, ClassPtr klass, const char *visitor_type) {
+  compile_class_method_signature(FunctionSignatureGenerator(W), klass, fmt_format("void accept({} &visitor)", visitor_type));
+  W << BEGIN << "generic_accept(visitor";
+  compile_generic_accept_call_args(W, klass, true);
+  W << ")" << SemicolonAndNL{} << END << NL;
+}
+
 void ClassDeclaration::compile_accept_visitor_methods(CodeGenerator &W, ClassPtr klass) {
   if (!klass->need_to_array_debug_visitor &&
       !klass->need_json_visitors &&
@@ -612,30 +666,18 @@ void ClassDeclaration::compile_accept_visitor_methods(CodeGenerator &W, ClassPtr
     << "  (std::apply(visitor, args), ...);" << NL
     << "}" << NL << NL;
 
-  FunctionSignatureGenerator(W) << "template<class Visitor>" << NL
-                                << "void generic_accept(Visitor &&visitor) " << BEGIN;
-  W << "generic_accept(visitor";
-  W << Indent{2};
+  compile_generic_accept_call(W, klass);
 
-  for (auto cur_klass = klass; cur_klass; cur_klass = cur_klass->parent_class) {
-    cur_klass->members.for_each([&W](const ClassMemberInstanceField &field) {
-      W << "," << NL;
-      W << "std::tie(\"" << field.local_name() << "\", $" << field.local_name() << ")";
-    });
+  if (klass->need_json_visitors) {
+    auto generator = klass->need_special_json_visitor_accept ? compile_json_visitor_accept : compile_accept_visitor;
+    W << NL;
+    generator(W, klass, "ToJsonVisitor");
+    generator(W, klass, "FromJsonVisitor");
   }
-
-  W << Indent{-2};
-  W << ");" << NL << END << NL;
 
   if (klass->need_to_array_debug_visitor) {
     W << NL;
     compile_accept_visitor(W, klass, "ToArrayVisitor");
-  }
-
-  if (klass->need_json_visitors) {
-    W << NL;
-    compile_accept_visitor(W, klass, "ToJsonVisitor");
-    compile_accept_visitor(W, klass, "FromJsonVisitor");
   }
 
   if (klass->need_instance_memory_estimate_visitor) {

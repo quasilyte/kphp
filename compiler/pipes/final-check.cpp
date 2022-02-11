@@ -2,9 +2,10 @@
 // Copyright (c) 2020 LLC «V Kontakte»
 // Distributed under the GPL v3 License, see LICENSE.notice.txt
 
-#include <string_view>
-
 #include "compiler/pipes/final-check.h"
+
+#include <set>
+#include <string_view>
 
 #include "common/termformat/termformat.h"
 #include "common/algorithms/string-algorithms.h"
@@ -107,19 +108,33 @@ void check_to_array_debug_call(VertexAdaptor<op_func_call> call) {
   }
 }
 
-void check_to_json_call(VertexAdaptor<op_func_call> call) {
+void check_json_fields_duplication(ClassPtr klass) noexcept {
+  std::set<std::string_view> used_json_keys;
+
+  for (auto ancestor : klass->get_all_ancestors()) {
+    ancestor->members.for_each([&used_json_keys, ancestor](const ClassMemberInstanceField &field) {
+      auto key = field.json_field_name.empty() ? field.local_name() : field.json_field_name;
+      bool success = used_json_keys.emplace(key).second;
+      kphp_error_return(success, fmt_format("kphp-json-field '{}' met twice, first time in class '{}'", key, ancestor->name));
+    });
+  }
+}
+
+void check_to_json_call(VertexAdaptor<op_func_call> call) noexcept {
   const auto *type = tinf::get_type(call->args()[0]);
   kphp_error_return(type->ptype() == tp_Class, "Argument of to_json() should a class type");
   const auto klass = type->class_type();
   kphp_error(!klass->is_ffi_cdata(), "Called to_json() with CData");
+  check_json_fields_duplication(klass);
   klass->deeply_require_json_visitors();
 }
 
-void check_from_json_call(VertexAdaptor<op_func_call> call) {
+void check_from_json_call(VertexAdaptor<op_func_call> call) noexcept {
   const auto *type = tinf::get_type(call);
   kphp_assert(type->ptype() == tp_Class);
   const auto klass = type->class_type();
   kphp_error(!klass->is_ffi_cdata(), "Called from_json() with CData");
+  check_json_fields_duplication(klass);
   klass->deeply_require_json_visitors();
 }
 
