@@ -7,8 +7,8 @@
 #include <string_view>
 #include <stdexcept>
 
-#include <rapidjson/document.h>
-#include <rapidjson/error/en.h>
+#include "rapidjson/document.h"
+#include "rapidjson/error/en.h"
 
 #include "runtime/kphp_core.h"
 

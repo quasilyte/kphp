@@ -626,7 +626,7 @@ static void compile_generic_accept_call_args(CodeGenerator &W, ClassPtr klass, b
   W << Indent{-2};
 }
 
-static bool has_any_fields_in_class(ClassPtr klass) noexcept {
+static bool has_any_fields_in_class(ClassPtr klass) {
   for (auto cur_klass = klass; cur_klass; cur_klass = cur_klass->parent_class) {
     if (cur_klass->members.has_any_instance_var()) {
       return true;

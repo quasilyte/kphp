@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <rapidjson/prettywriter.h>
+#include "rapidjson/writer.h"
 
 #include "runtime/kphp_core.h"
 

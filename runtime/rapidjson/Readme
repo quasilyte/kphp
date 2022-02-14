@@ -1,0 +1,13 @@
+this is copy of fresh master branch from https://github.com/Tencent/rapidjson repo
+
+latest commit:
+
+commit e4bde977440d4a00f820b6586899e48a972d2493 (HEAD -> master, origin/master, origin/HEAD)
+Merge: bf8ca5da 88bbd87d
+Author: Milo Yip <miloyip@gmail.com>
+Date:   Wed Feb 9 10:48:22 2022 +0800
+
+    Merge pull request #1988 from Tencent/revert-1987-fix-placement-new-alignment
+
+    Revert "Fix the alignment of placement new buffer for GenericValue."
+
