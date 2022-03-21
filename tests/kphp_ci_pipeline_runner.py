@@ -381,8 +381,10 @@ if __name__ == "__main__":
     runner.add_test_group(
         name="functional-tests",
         description="run kphp functional tests in {} mode".format("gcc"),
-        cmd="KPHP_TESTS_DISTCC_FILE={distcc_hosts_file} "
+        cmd="KPHP_TESTS_POLYFILLS_REPO={kphp_polyfills_repo} "
+            "KPHP_TESTS_DISTCC_FILE={distcc_hosts_file} "
             "python3 -m pytest --basetemp={base_tempdir} --tb=native -n{{jobs}} {functional_tests_dir}".format(
+            kphp_polyfills_repo=kphp_polyfills_repo,
             functional_tests_dir=functional_tests_dir,
             distcc_hosts_file=distcc_hosts_file,
             base_tempdir=os.path.expanduser('~/_tmp')   # Workaround to make unix socket paths needed by pytest-mysql have length < 108 symbols

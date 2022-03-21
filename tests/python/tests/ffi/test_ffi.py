@@ -239,6 +239,9 @@ class TestFFI(KphpCompilerAutoTestCase):
     def test_util_sizeof(self):
         self.ffi_build_and_compare_with_php('php/util/sizeof.php')
 
+    def test_util_memcmp(self):
+        self.ffi_build_and_compare_with_php('php/util/memcmp.php')
+
     def test_util_memcpy(self):
         self.ffi_build_and_compare_with_php('php/util/memcpy.php')
 
@@ -262,6 +265,15 @@ class TestFFI(KphpCompilerAutoTestCase):
         self.ffi_build_and_compare_with_php('php/staticlib/implicit.php')
 
     # other tests
+
+    def test_dynamic_size_arrays(self):
+        self.ffi_build_and_compare_with_php('php/dynamic_size_arrays.php', shared_libs=['pointers'])
+
+    def test_fixed_size_arrays(self):
+        self.ffi_build_and_compare_with_php('php/fixed_size_arrays.php', shared_libs=['pointers'])
+
+    def test_pointer_ops(self):
+        self.ffi_build_and_compare_with_php('php/pointer_ops.php', shared_libs=['pointers'])
 
     def test_vararg(self):
         self.ffi_build_and_compare_with_php('php/vararg.php')

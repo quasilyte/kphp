@@ -17,6 +17,31 @@ struct C$FFI$CData: public refcountable_php_classes<C$FFI$CData<T>> {
   int get_hash() const noexcept { return 1945543994; }
 };
 
+template<class T>
+struct CDataArray: public refcountable_php_classes<CDataArray<T>> {
+  T *data{nullptr};
+  int64_t len{0};
+
+  explicit CDataArray(int64_t len)
+    : data{reinterpret_cast<T*>(dl::allocate(sizeof(T) * len))}
+    , len{len} {
+    static_assert(std::is_trivial<T>::value, "CDataArray elements should be trivial");
+    std::memset(data, 0, sizeof(T) * len);
+  }
+
+  CDataArray(T* data, int64_t len)
+    : data{data}
+    , len{len} {}
+
+  CDataArray() = default;
+
+  ~CDataArray() {
+    if (data) {
+      dl::deallocate(data, sizeof(T) * len);
+    }
+  }
+};
+
 // Maybe CDataRef is enough for both field/array references,
 // but CDataPtr is semantically different: it's an address that
 // was obtained explicitly by FFI::addr();
@@ -75,6 +100,13 @@ struct CDataRef {
   int get_hash() const noexcept { return -1965114283; }
 };
 
+// CDataArrayRef is a non-owning pointer to a C array that keeps its length
+template<class T>
+struct CDataArrayRef {
+  T *data;
+  int64_t len;
+};
+
 template<class T>
 CDataPtr<T> ffi_addr(class_instance<C$FFI$CData<T>> &cdata) { return CDataPtr<T>::create(&cdata->c_value); }
 
@@ -90,6 +122,11 @@ CDataPtr<T> ffi_addr(T &ref) { return CDataPtr<T>::create(&ref); }
 template<class T>
 CDataPtr<T*> ffi_addr(CDataPtr<T> &ref) { return CDataPtr<T*>::create(&ref.c_value); }
 
+template<class T>
+CDataPtr<T> ffi_addr(class_instance<CDataArray<T>> &cdata) { return CDataPtr<T>::create(cdata->data); }
+
+template<class T>
+CDataPtr<T> ffi_addr(const class_instance<CDataArray<T>> &cdata) { return CDataPtr<T>::create(cdata->data); }
 
 template<class T>
 T *ffi_c_value_ptr(CDataPtr<T> ptr) { return {ptr.c_value}; }
@@ -99,6 +136,12 @@ T *ffi_c_value_ptr(class_instance<C$FFI$CData<T>> &cdata) { return {&cdata->c_va
 
 template<class T>
 T *ffi_c_value_ptr(const class_instance<C$FFI$CData<T>> &cdata) { return &cdata->c_value; }
+
+template<class T>
+T *ffi_c_value_ptr(const class_instance<CDataArray<T>> &cdata) { return cdata->data; }
+
+template<class T>
+T *ffi_c_value_ptr(CDataArrayRef<T> ref) { return ref.data; }
 
 template<class T>
 class_instance<C$FFI$CData<T>> ffi_clone_impl(const T &value) {
@@ -190,6 +233,16 @@ int64_t f$FFI$$sizeof(CDataPtr<T> cdata __attribute__ ((unused))) {
 }
 
 template<class T>
+int64_t f$FFI$$sizeof(const class_instance<CDataArray<T>> &a) {
+  return sizeof(T) * a->len;
+}
+
+template<class T>
+int64_t f$FFI$$sizeof(const CDataArrayRef<T> &a) {
+  return sizeof(T) * a.len;
+}
+
+template<class T>
 int64_t f$FFI$$sizeof(const class_instance<C$FFI$CData<T>> &cdata __attribute__ ((unused))) {
   return sizeof(C$FFI$CData<T>::c_value);
 }
@@ -197,6 +250,14 @@ int64_t f$FFI$$sizeof(const class_instance<C$FFI$CData<T>> &cdata __attribute__ 
 template<class T>
 int64_t f$FFI$$sizeof(const CDataRef<T> &ref) {
   return sizeof(*ref.c_value);
+}
+
+template<class T1, class T2>
+int64_t f$FFI$$memcmp(T1 ptr1, T2 ptr2, int64_t size)  {
+  int64_t result = std::memcmp(ffi_c_value_ptr(ptr1), ffi_c_value_ptr(ptr2), size);
+  // contrary to what PHP documentation says, it actually only returns -1, 0 and 1 values,
+  // so we need to adjust memcmp results here
+  return std::clamp(result, -1L, 1L);
 }
 
 template<class T1, class T2>
@@ -215,9 +276,15 @@ bool f$FFI$$isNull(T *ptr) { return ptr == nullptr; }
 template<class T>
 bool f$FFI$$isNull(CDataPtr<T> ptr) { return ptr.c_value == nullptr; }
 
-// count() for fixed-size arrays
-template<typename T, int64_t ArraySize>
-constexpr int64_t f$count(T (&)[ArraySize]) { return ArraySize; }
+template<class T>
+constexpr int64_t f$count(const class_instance<CDataArray<T>> &a) {
+  return a->len;
+}
+
+template<class T>
+constexpr int64_t f$count(const CDataArrayRef<T> &a) {
+  return a.len;
+}
 
 template<class T>
 class_instance<C$FFI$CData<T>> ffi_new_cdata() {
@@ -231,9 +298,27 @@ CDataPtr<typename std::remove_pointer<T>::type> ffi_new_cdata_ptr() {
   return CDataPtr<typename std::remove_pointer<T>::type>::create(nullptr);
 }
 
+template<class T>
+class_instance<CDataArray<T>> ffi_new_cdata_array(int64_t len) {
+  if (unlikely(len < 0)) {
+    php_critical_error("FFI::new(): negative array size");
+  }
+  if (unlikely(len == 0)) {
+    php_critical_error("FFI::new(): zero array size");
+  }
+  class_instance<CDataArray<T>> cdata;
+  cdata.alloc(len);
+  return cdata;
+}
+
 template<class ToType, class FromType>
 CDataRef<ToType> ffi_cast_scalar(FromType &v) {
   return CDataRef<ToType>{(ToType*)(&v->c_value)};
+}
+
+template<class ToType, class T>
+CDataPtr<typename std::remove_pointer<ToType>::type> ffi_cast_array(class_instance<CDataArray<T>> &a) {
+  return CDataPtr<typename std::remove_pointer<ToType>::type>{(ToType)a->data};
 }
 
 template<class ToType, class FromType>
@@ -261,14 +346,44 @@ CDataRef<ToType> ffi_cast(class_instance<C$FFI$CData<FromType>> &v) {
   return CDataRef<ToType>{(ToType*)(&v->c_value)};
 }
 
-template<class T>
-const T &ffi_array_get(const T *array, int64_t offset) {
-  return array[offset];
+inline void ffi_array_bound_check(int64_t len, int64_t index) {
+  if (unlikely(index < 0 || index >= len)) {
+    php_critical_error("C array index out of bounds");
+  }
 }
 
 template<class T>
-T &ffi_array_get(T *array, int64_t offset) {
-  return array[offset];
+void ffi_array_set(class_instance<CDataArray<T>> &a, int64_t index, T value) {
+  ffi_array_bound_check(a->len, index);
+  a->data[index] = value;
+}
+
+template<class T>
+void ffi_array_set(CDataArrayRef<T> a, int64_t index, T value) {
+  ffi_array_bound_check(a.len, index);
+  a.data[index] = value;
+}
+
+template<class T>
+void ffi_array_set(CDataPtr<T> ptr, int64_t index, T value) {
+  ptr.c_value[index] = value;
+}
+
+template<class T>
+T& ffi_array_get(class_instance<CDataArray<T>> &a, int64_t index) {
+  ffi_array_bound_check(a->len, index);
+  return a->data[index];
+}
+
+template<class T>
+T& ffi_array_get(CDataArrayRef<T> a, int64_t index) {
+  ffi_array_bound_check(a.len, index);
+  return a.data[index];
+}
+
+template<class T>
+T& ffi_array_get(CDataPtr<T> ptr, int64_t index) {
+  return ptr.c_value[index];
 }
 
 class_instance<C$FFI$Scope> ffi_load_scope_symbols(class_instance<C$FFI$Scope> instance, int shared_lib_id, int sym_offset, int num_symbols);
@@ -288,7 +403,12 @@ inline string ffi_c2php(const char *v) { return string(v); }
 inline string ffi_c2php(char v) { return {1, v}; }
 
 template<class T>
-CDataPtr<T> ffi_c2php(T* v) {
+CDataArrayRef<T> ffi_c2php_array(T *data, int64_t size) {
+  return CDataArrayRef<T>{data, size};
+}
+
+template<class T>
+CDataPtr<T> ffi_c2php(T *v) {
   if (v == nullptr) {
     return CDataPtr<T>::create(reinterpret_cast<T*>(1));
   }

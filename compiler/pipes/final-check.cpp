@@ -380,6 +380,16 @@ VertexPtr FinalCheckPass::on_enter_vertex(VertexPtr vertex) {
   if (vertex->type() == op_ffi_php2c_conv) {
     check_php2c_conv(vertex.as<op_ffi_php2c_conv>());
   }
+  if (auto array_get = vertex.try_as<op_ffi_array_get>()) {
+    const auto *key_type = tinf::get_type(array_get->key());
+    kphp_error(key_type->ptype() == tp_int,
+               fmt_format("ffi_array_get index type must be int, {} used instead", key_type->as_human_readable()));
+  }if (auto array_set = vertex.try_as<op_ffi_array_set>()) {
+    const auto *key_type = tinf::get_type(array_set->key());
+    kphp_error(key_type->ptype() == tp_int,
+               fmt_format("ffi_array_set index type must be int, {} used instead", key_type->as_human_readable()));
+  }
+
   if (vertex->type() == op_eq3) {
     check_eq3(vertex.as<meta_op_binary>()->lhs(), vertex.as<meta_op_binary>()->rhs());
   }

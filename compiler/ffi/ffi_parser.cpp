@@ -106,9 +106,20 @@ std::pair<const FFIType*, FFIParseError> ffi_parse_type(const std::string &type_
   FFIType *result_type = nullptr;
   FFIParseError err;
 
+  // type expressions like `int[]` are not valid in most contexts,
+  // but PHP allows them in functions like FFI::new()
+  // to support that behavior, we parse dynamic array dimensions in this way
+//  vk::string_view c_expr = type_expr;
+//  int array_dims = 0;
+//  while (c_expr.ends_with("[]")) {
+//    array_dims++;
+//    c_expr.remove_suffix(strlen("[]"));
+//  }
+
   // to parse an arbitrary type expression, parse it as a part of
   // a top level declaration; function argument grammar is the most
   // suitable thing for what we want here
+//  std::string src = "void f(" + c_expr + ");\n";
   std::string src = "void f(" + type_expr + ");\n";
   bool expr_mode = true;
   ffi::ParsingDriver driver(src, typedefs, expr_mode);
@@ -124,5 +135,15 @@ std::pair<const FFIType*, FFIParseError> ffi_parse_type(const std::string &type_
   } catch (ffi::ParsingDriver::ParseError &e) {
     set_error(err, src, e);
   }
+
+  // wrap the result_type in array types
+//  while (array_dims > 0) {
+//    auto *array_type = new FFIType{FFITypeKind::Array};
+//    array_type->members = {result_type};
+//    array_type->num = -1;
+//    result_type = array_type;
+//    array_dims--;
+//  }
+
   return {result_type, err};
 }
