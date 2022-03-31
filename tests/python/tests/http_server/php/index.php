@@ -46,6 +46,8 @@ if ($_SERVER["PHP_SELF"] === "/ini_get") {
         $res = 0;
     }
     echo json_encode(['len' => $res]);
+} else if ($_SERVER["PHP_SELF"] === "/test_script_errors") {
+    critical_error('Test error');
 } else {
   echo "Hello world!";
 }
