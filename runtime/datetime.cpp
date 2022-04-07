@@ -380,7 +380,7 @@ bool f$date_default_timezone_set(const string &s) {
     php_warning("Timezone %s is not supported, use %s instead", PHP_TIMELIB_TZ_GMT4, PHP_TIMELIB_TZ_GMT3);
     return false;
   }
-  php_critical_error ("unsupported default timezone \"%s\"", s.c_str());
+  php_critical_errorf ("unsupported default timezone \"%s\"", s.c_str());
 }
 
 string f$date_default_timezone_get() {

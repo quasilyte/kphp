@@ -108,7 +108,7 @@ public:
         return res == CURLE_OK ? mixed{value} : mixed{false};
       }
       default:
-        php_critical_error("Got unknown curl info type '%d'", type);
+        php_critical_errorf("Got unknown curl info type '%d'", type);
         __builtin_unreachable();
     }
   }

@@ -22,7 +22,7 @@ class_instance<C$PDO> f$PDO$$__construct(const class_instance<C$PDO> &v$this, co
   if (driver_name == string{"mysql"}) {
     v$this.get()->driver = std::make_unique<pdo::mysql::MysqlPdoDriver>();
   } else {
-    php_critical_error("Unknown PDO driver name: %s", driver_name.c_str());
+    php_critical_errorf("Unknown PDO driver name: %s", driver_name.c_str());
   }
 
   v$this.get()->driver->connect(v$this, connection_string, username, password, options);

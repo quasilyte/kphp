@@ -28,7 +28,7 @@ bool FFIEnv::is_scope_loaded(int sym_offset) {
 void FFIEnv::open_shared_lib(int id) {
   void *handle = funcs.dlopen(libs[id].path, RTLD_LAZY);
   if (!handle) {
-    php_critical_error("can't open %s library", libs[id].path);
+    php_critical_errorf("can't open %s library", libs[id].path);
   }
   libs[id].handle = handle;
 }

@@ -97,7 +97,7 @@ bool mb_UTF8_check(const char *s) {
 bool f$mb_check_encoding(const string &str, const string &encoding) {
   int encoding_num = mb_detect_encoding(encoding);
   if (encoding_num < 0) {
-    php_critical_error ("encoding \"%s\" doesn't supported in mb_check_encoding", encoding.c_str());
+    php_critical_errorf ("encoding \"%s\" doesn't supported in mb_check_encoding", encoding.c_str());
     return !str.empty();
   }
 
@@ -112,7 +112,7 @@ bool f$mb_check_encoding(const string &str, const string &encoding) {
 int64_t f$mb_strlen(const string &str, const string &encoding) {
   int encoding_num = mb_detect_encoding(encoding);
   if (encoding_num < 0) {
-    php_critical_error ("encoding \"%s\" doesn't supported in mb_strlen", encoding.c_str());
+    php_critical_errorf ("encoding \"%s\" doesn't supported in mb_strlen", encoding.c_str());
     return str.size();
   }
 
@@ -127,7 +127,7 @@ int64_t f$mb_strlen(const string &str, const string &encoding) {
 string f$mb_strtolower(const string &str, const string &encoding) {
   int encoding_num = mb_detect_encoding(encoding);
   if (encoding_num < 0) {
-    php_critical_error ("encoding \"%s\" doesn't supported in mb_strtolower", encoding.c_str());
+    php_critical_errorf ("encoding \"%s\" doesn't supported in mb_strtolower", encoding.c_str());
     return str;
   }
 
@@ -192,7 +192,7 @@ string f$mb_strtolower(const string &str, const string &encoding) {
 string f$mb_strtoupper(const string &str, const string &encoding) {
   int encoding_num = mb_detect_encoding(encoding);
   if (encoding_num < 0) {
-    php_critical_error ("encoding \"%s\" doesn't supported in mb_strtoupper", encoding.c_str());
+    php_critical_errorf ("encoding \"%s\" doesn't supported in mb_strtoupper", encoding.c_str());
     return str;
   }
 
@@ -273,7 +273,7 @@ int check_strpos_agrs(const char *func_name, const string &needle, int64_t offse
 
   const int encoding_num = mb_detect_encoding(encoding);
   if (unlikely(encoding_num < 0)) {
-    php_critical_error ("encoding \"%s\" doesn't supported in %s()", encoding.c_str(), func_name);
+    php_critical_errorf ("encoding \"%s\" doesn't supported in %s()", encoding.c_str(), func_name);
     return 0;
   }
   return encoding_num;
@@ -311,7 +311,7 @@ Optional<int64_t> f$mb_stripos(const string &haystack, const string &needle, int
 string f$mb_substr(const string &str, int64_t start, const mixed &length_var, const string &encoding) {
   int encoding_num = mb_detect_encoding(encoding);
   if (encoding_num < 0) {
-    php_critical_error ("encoding \"%s\" doesn't supported in mb_substr", encoding.c_str());
+    php_critical_errorf ("encoding \"%s\" doesn't supported in mb_substr", encoding.c_str());
     return str;
   }
 

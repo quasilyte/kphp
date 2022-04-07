@@ -465,7 +465,7 @@ inline int64_t f$error_reporting();
 inline void f$warning(const string &message);
 
 #define f$critical_error(message) \
-  php_critical_error("%s", message.c_str());
+  php_critical_error(message.c_str());
 
 inline int64_t f$memory_get_static_usage();
 

@@ -107,7 +107,7 @@ const HashTraits &find_hash_algorithm(const char *algo) noexcept {
   const auto *const it = std::find_if(supported_algorithms.begin(), supported_algorithms.end(),
                                [algo](const HashTraits &traits) { return !strcmp(algo, traits.name); });
   if (it == supported_algorithms.end()) {
-    php_critical_error ("algo %s not supported in function hash", algo);
+    php_critical_errorf ("algo %s not supported in function hash", algo);
   }
   return *it;
 }

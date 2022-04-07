@@ -218,6 +218,24 @@ void php_assert__(const char *msg, const char *file, int line) {
   _exit(1);
 }
 
+void php_critical__(const char *msg, const char *file, int line) {
+  php_error("Critical error \"%s\" in file %s on line %d", msg, file, line);
+  raise_php_assert_signal__();
+  fprintf(stderr, "_exiting in php_critical_error\n");
+  _exit(1);
+}
+
+void php_critical_format__(char const *message, ...) {
+  va_list args;
+  va_start(args, message);
+  php_warning_impl(false, E_ERROR, message, args);
+  va_end(args);
+
+  raise_php_assert_signal__();
+  fprintf(stderr, "_exiting in php_critical_error\n");
+  _exit(1);
+}
+
 void raise_php_assert_signal__() {
   raise(SIGPHPASSERT);
   vk::singleton<JsonLogger>::get().fsync_log_file();

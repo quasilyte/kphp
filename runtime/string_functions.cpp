@@ -187,7 +187,7 @@ string f$convert_cyr_string(const string &str, const string &from_s, const strin
     table = koi_to_win;
   }
   if (table == nullptr) {
-    php_critical_error ("unsupported conversion from '%c' to '%c' in function convert_cyr_string", from, to);
+    php_critical_errorf ("unsupported conversion from '%c' to '%c' in function convert_cyr_string", from, to);
     return str;
   }
 
@@ -374,12 +374,12 @@ string f$htmlentities(const string &str) {
 
 string f$html_entity_decode(const string &str, int64_t flags, const string &encoding) {
   if (flags >= 3) {
-    php_critical_error ("unsupported parameter flags = %" PRIi64 " in function html_entity_decode", flags);
+    php_critical_errorf ("unsupported parameter flags = %" PRIi64 " in function html_entity_decode", flags);
   }
 
   bool utf8 = memchr(encoding.c_str(), '8', encoding.size()) != nullptr;
   if (!utf8 && strstr(encoding.c_str(), "1251") == nullptr) {
-    php_critical_error ("unsupported encoding \"%s\" in function html_entity_decode", encoding.c_str());
+    php_critical_errorf ("unsupported encoding \"%s\" in function html_entity_decode", encoding.c_str());
     return str;
   }
 
@@ -460,7 +460,7 @@ string f$html_entity_decode(const string &str, int64_t flags, const string &enco
 
 string f$htmlspecialchars(const string &str, int64_t flags) {
   if (flags >= 3) {
-    php_critical_error ("unsupported parameter flags = %" PRIi64 " in function htmlspecialchars", flags);
+    php_critical_errorf ("unsupported parameter flags = %" PRIi64 " in function htmlspecialchars", flags);
   }
 
   const string::size_type len = str.size();
@@ -521,7 +521,7 @@ string f$htmlspecialchars(const string &str, int64_t flags) {
 
 string f$htmlspecialchars_decode(const string &str, int64_t flags) {
   if (flags >= 3) {
-    php_critical_error ("unsupported parameter flags = %" PRIi64 " in function htmlspecialchars_decode", flags);
+    php_critical_errorf ("unsupported parameter flags = %" PRIi64 " in function htmlspecialchars_decode", flags);
   }
 
   int len = str.size();
@@ -735,7 +735,7 @@ string f$number_format(double number, int64_t decimals, const string &dec_point,
   }
 
   if (result_begin <= php_buf) {
-    php_critical_error ("maximum length of result (%d) exceeded", PHP_BUF_LEN);
+    php_critical_errorf ("maximum length of result (%d) exceeded", PHP_BUF_LEN);
     return {};
   }
 
@@ -1890,7 +1890,7 @@ string f$str_pad(const string &input, int64_t len, const string &pad_str, int64_
     return input;
   }
   if (len > string::max_size()) {
-    php_critical_error ("tried to allocate too big string of size %" PRIi64, len);
+    php_critical_errorf ("tried to allocate too big string of size %" PRIi64, len);
   }
 
   const auto strlen = static_cast<string::size_type>(len);
@@ -1935,7 +1935,7 @@ string f$str_repeat(const string &s, int64_t multiplier) {
 
   auto mult = static_cast<string::size_type>(multiplier);
   if (string::max_size() / len < mult) {
-    php_critical_error ("tried to allocate too big string of size %" PRIi64, multiplier * len);
+    php_critical_errorf ("tried to allocate too big string of size %" PRIi64, multiplier * len);
   }
 
   if (len == 1) {

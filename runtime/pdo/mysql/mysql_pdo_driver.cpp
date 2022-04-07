@@ -39,7 +39,7 @@ void MysqlPdoDriver::connect(const class_instance<C$PDO> &v$this, const string &
     } else if (key == string{"port"}) {
       port = static_cast<int>(value.to_int());
     } else {
-      php_critical_error("Wrong dsn key %s at MySQL PDO::__construct", key.c_str());
+      php_critical_errorf("Wrong dsn key %s at MySQL PDO::__construct", key.c_str());
     }
   }
 

@@ -32,7 +32,7 @@ char *string::string_inner::ref_data() const {
 
 string::size_type string::string_inner::new_capacity(size_type requested_capacity, size_type old_capacity) {
   if (requested_capacity > max_size()) {
-    php_critical_error ("tried to allocate too big string of size %lld", (long long)requested_capacity);
+    php_critical_errorf ("tried to allocate too big string of size %lld", (long long)requested_capacity);
   }
 
   if (requested_capacity > old_capacity && requested_capacity < 2 * old_capacity) {
@@ -389,7 +389,7 @@ string &string::append(const char *s) {
 string &string::append(const char *s, size_type n) {
   if (n) {
     if (max_size() - size() < n) {
-      php_critical_error ("tried to allocate too big string of size %lld", (long long)size() + n);
+      php_critical_errorf ("tried to allocate too big string of size %lld", (long long)size() + n);
     }
     const size_type len = n + size();
     if (len > capacity() || inner()->is_shared()) {
@@ -411,7 +411,7 @@ string &string::append(const char *s, size_type n) {
 string &string::append(size_type n, char c) {
   if (n) {
     if (max_size() - size() < n) {
-      php_critical_error ("tried to allocate too big string of size %lld", (long long)size() + n);
+      php_critical_errorf ("tried to allocate too big string of size %lld", (long long)size() + n);
     }
     const size_type len = n + size();
     reserve_at_least(len);
@@ -590,7 +590,7 @@ string &string::assign(const char *s) {
 
 string &string::assign(const char *s, size_type n) {
   if (max_size() < n) {
-    php_critical_error ("tried to allocate too big string of size %lld", (long long)n);
+    php_critical_errorf ("tried to allocate too big string of size %lld", (long long)n);
   }
 
   if (disjunct(s) || inner()->is_shared()) {
@@ -610,7 +610,7 @@ string &string::assign(const char *s, size_type n) {
 
 string &string::assign(size_type n, char c) {
   if (max_size() < n) {
-    php_critical_error ("tried to allocate too big string of size %lld", (long long)n);
+    php_critical_errorf ("tried to allocate too big string of size %lld", (long long)n);
   }
 
   set_size(n);
@@ -621,7 +621,7 @@ string &string::assign(size_type n, char c) {
 
 string &string::assign(size_type n, bool b __attribute__((unused))) {
   if (max_size() < n) {
-    php_critical_error ("tried to allocate too big string of size %lld", (long long)n);
+    php_critical_errorf ("tried to allocate too big string of size %lld", (long long)n);
   }
 
   set_size(n);

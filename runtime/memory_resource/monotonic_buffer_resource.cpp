@@ -17,7 +17,7 @@ void monotonic_buffer::init(void *buffer, size_t buffer_size) noexcept {
 }
 
 void monotonic_buffer::critical_dump(void *mem, size_t size) const noexcept {
-  php_critical_error(
+  php_critical_errorf(
     "Found unexpected memory piece:\n"
     "ptr:                  %p\n"
     "size:                 %zu\n"

@@ -480,7 +480,7 @@ bool store_string(const char *v, int32_t v_len) {
       << (char)((v_len >> 16) & 255);
     all_len += 4;
   } else {
-    php_critical_error ("trying to store too big string of length %d", v_len);
+    php_critical_errorf ("trying to store too big string of length %d", v_len);
   }
   data_buf.append(v, static_cast<size_t>(v_len));
 

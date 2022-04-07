@@ -58,7 +58,7 @@ public:
   static size_type unsafe_cast_to_size_type(int64_t size) noexcept {
     php_assert(size >= 0);
     if (unlikely(size > max_size())) {
-      php_critical_error ("Trying to make too big string of size %" PRId64, size);
+      php_critical_errorf ("Trying to make too big string of size %" PRId64, size);
     }
     return static_cast<size_type>(size);
   }

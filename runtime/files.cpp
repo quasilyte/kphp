@@ -499,7 +499,7 @@ Optional<string> f$tempnam(const string &dir, const string &prefix) {
 
     dir_real = f$realpath(dir_new);
     if (!f$boolval(dir_real)) {
-      php_critical_error ("wrong directory \"%s\" found in function tempnam", dir_new.c_str());
+      php_critical_errorf ("wrong directory \"%s\" found in function tempnam", dir_new.c_str());
       return false;
     }
   }

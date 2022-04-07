@@ -19,7 +19,7 @@ inline void string_buffer::resize(string::size_type new_buffer_len) {
         string_buffer_error_flag = STRING_BUFFER_ERROR_FLAG_FAILED;
         return;
       } else {
-        php_critical_error ("maximum buffer size exceeded. buffer_len = %u, new_buffer_len = %u", buffer_len, new_buffer_len);
+        php_critical_errorf ("maximum buffer size exceeded. buffer_len = %u, new_buffer_len = %u", buffer_len, new_buffer_len);
       }
     }
   }

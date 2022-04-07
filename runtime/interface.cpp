@@ -115,7 +115,7 @@ void f$ob_start(const string &callback) {
     if (ob_cur_buffer == 0 && callback == string("ob_gzhandler")) {
       http_need_gzip |= 4;
     } else {
-      php_critical_error ("unsupported callback %s at buffering level %d", callback.c_str(), ob_cur_buffer + 1);
+      php_critical_errorf ("unsupported callback %s at buffering level %d", callback.c_str(), ob_cur_buffer + 1);
     }
   }
 
@@ -251,7 +251,7 @@ static void header(const char *str, int str_len, bool replace = true, int http_r
       }
       sscanf(str + pos, "%d", &http_return_code);
     } else {
-      php_critical_error ("wrong status line '%s' specified in function header", str);
+      php_critical_errorf ("wrong status line '%s' specified in function header", str);
     }
     return;
   }
@@ -1783,7 +1783,7 @@ bool f$ini_set(const string &s, const string &value) {
     return f$error_reporting(f$intval(value));
   }
 
-  php_critical_error ("unrecognized option %s in ini_set", s.c_str());
+  php_critical_errorf ("unrecognized option %s in ini_set", s.c_str());
   return false; //unreachable
 }
 
