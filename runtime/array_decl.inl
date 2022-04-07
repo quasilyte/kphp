@@ -200,7 +200,7 @@ private:
   };
 
   inline bool mutate_if_vector_shared(uint32_t mul = 1);
-  inline bool mutate_to_size_if_vector_shared(int64_t int_size);
+  __attribute__ ((noinline)) bool mutate_to_size_if_vector_shared(int64_t int_size);
   inline void mutate_to_size(int64_t int_size);
   inline bool mutate_if_map_shared(uint32_t mul = 1);
   inline void mutate_if_vector_needed_int();
