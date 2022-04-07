@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <assert.h>
 #include <cstdint>
+#include <cstring>
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
@@ -33,19 +34,35 @@ double get_utime_monotonic () {
   return precise_now;
 }
 
+static uint64_t float64_bits(double v) {
+  static_assert(sizeof(uint64_t) == sizeof(double));
+  uint64_t bits = 0;
+  std::memcpy(&bits, &v, sizeof(double));
+  return bits;
+}
+
+static double float64_from_bits(uint64_t bits) {
+  static_assert(sizeof(uint64_t) == sizeof(double));
+  double v = 0;
+  std::memcpy(&v, &bits, sizeof(double));
+  return v;
+}
 
 template<typename T>
 static inline double get_cached_time(T get_time, int cycles_cache) {
-  thread_local static double last_cached_time = -1;
-  thread_local static uint64_t last_cycleclock;
-  const auto cycleclock = cycleclock_now();
+  return get_time(-1);
 
-  if (cycleclock - last_cycleclock > cycles_cache) {
-    last_cached_time = get_time(last_cached_time);
-    last_cycleclock = cycleclock;
-  }
-
-  return last_cached_time;
+//  thread_local static uint64_t last_cached_time = -1;
+//  thread_local static uint64_t last_cycleclock;
+//  const auto cycleclock = cycleclock_now();
+//
+//  if (cycleclock - last_cycleclock > cycles_cache) {
+//    double time_as_double = get_time(last_cached_time);
+//    last_cached_time = float64_bits(time_as_double);
+//    last_cycleclock = cycleclock;
+//  }
+//
+//  return float64_from_bits(last_cached_time);
 }
 
 double get_double_time() {
