@@ -675,27 +675,32 @@ bool array<T>::is_pseudo_vector() const {
 }
 
 template<class T>
-bool array<T>::mutate_if_vector_shared(uint32_t mul) {
-  return mutate_to_size_if_vector_shared(mul * int64_t{p->int_size});
+bool array<T>::is_shared() const noexcept {
+  return p->ref_cnt > 0;
 }
 
 template<class T>
-bool array<T>::mutate_to_size_if_vector_shared(int64_t int_size) {
-  if (p->ref_cnt > 0) {
-    array_inner *new_array = array_inner::create(int_size, 0, true);
-
-    const auto size = static_cast<uint32_t>(p->int_size);
-    T *it = (T *)p->int_entries;
-
-    for (uint32_t i = 0; i < size; i++) {
-      new_array->push_back_vector_value(it[i]);
-    }
-
-    p->dispose();
-    p = new_array;
+bool array<T>::mutate_if_vector_shared(uint32_t mul) {
+  if (is_shared()) {
+    mutate_to_size_shared_vector(mul * int64_t{p->int_size});
     return true;
   }
   return false;
+}
+
+template<class T>
+void array<T>::mutate_to_size_shared_vector(int64_t int_size) {
+  array_inner *new_array = array_inner::create(int_size, 0, true);
+
+  const auto size = static_cast<uint32_t>(p->int_size);
+  T *it = (T *)p->int_entries;
+
+  for (uint32_t i = 0; i < size; i++) {
+    new_array->push_back_vector_value(it[i]);
+  }
+
+  p->dispose();
+  p = new_array;
 }
 
 template<class T>
@@ -731,7 +736,8 @@ void array<T>::mutate_if_vector_needed_int() {
 
 template<class T>
 void array<T>::mutate_to_size(int64_t int_size) {
-  if (mutate_to_size_if_vector_shared(int_size)) {
+  if (is_shared()) {
+    mutate_to_size_shared_vector(int_size);
     return;
   }
   if (unlikely(int_size > array_inner::MAX_HASHTABLE_SIZE)) {
