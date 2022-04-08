@@ -229,29 +229,44 @@ const typename array<T>::array_inner_fields_for_map &array<T>::array_inner::fiel
   return const_cast<array_inner *>(this)->fields_for_map();
 }
 
+template<size_t SizeofT>
+size_t sizeof_vector_helper(uint32_t int_size) {
+  static_assert(array<int>::SizeofArrayInner == array<char>::SizeofArrayInner);
+  static_assert(array<int16_t>::SizeofArrayInner == array<int*>::SizeofArrayInner);
+
+  return array<int>::SizeofArrayInner + int_size * SizeofT;
+}
+
 template<class T>
 size_t array<T>::array_inner::sizeof_vector(uint32_t int_size) {
-  return sizeof(array_inner) + int_size * sizeof(T);
+  return sizeof_vector_helper<sizeof(T)>(int_size);
+}
+
+template<size_t SizeofIntHashEntry, size_t SizeofStringHashEntry>
+size_t sizeof_map_helper(uint32_t int_size, uint32_t string_size) {
+  return array<int>::SizeofInnerFieldsForMap + array<int>::SizeofArrayInner +
+         (int_size * SizeofIntHashEntry) + (string_size * SizeofStringHashEntry);
 }
 
 template<class T>
 size_t array<T>::array_inner::sizeof_map(uint32_t int_size, uint32_t string_size) {
-  return sizeof(array_inner_fields_for_map) + sizeof(array_inner) + int_size * sizeof(int_hash_entry) + string_size * sizeof(string_hash_entry);
+  return sizeof_map_helper<sizeof(int_hash_entry), sizeof(string_hash_entry)>(int_size, string_size);
 }
 
-template<class T>
-size_t array<T>::array_inner::estimate_size(int64_t &new_int_size, int64_t &new_string_size, bool is_vector) {
+template<size_t SizeofT, size_t SizeofIntHashEntry, size_t SizeofStringHashEntry>
+__attribute__((noinline))
+size_t array_size_estimate_helper(int64_t &new_int_size, int64_t &new_string_size, bool is_vector) {
   new_int_size = std::max(new_int_size, int64_t{0});
   new_string_size = std::max(new_string_size, int64_t{0});
 
-  if (new_int_size + new_string_size > MAX_HASHTABLE_SIZE) {
+  if (new_int_size + new_string_size > (1 << 26)) {
     php_critical_error ("max array size exceeded: int_size = %" PRIi64 ", string_size = %" PRIi64, new_int_size, new_string_size);
   }
 
   if (is_vector) {
     php_assert (new_string_size == 0);
     new_int_size += 2;
-    return sizeof_vector(static_cast<uint32_t>(new_int_size));
+    return sizeof_vector_helper<SizeofT>(new_int_size);
   }
 
   new_int_size = 2 * new_int_size + 3;
@@ -264,7 +279,12 @@ size_t array<T>::array_inner::estimate_size(int64_t &new_int_size, int64_t &new_
     new_string_size += 2;
   }
 
-  return sizeof_map(static_cast<uint32_t>(new_int_size), static_cast<uint32_t>(new_string_size));
+  return sizeof_map_helper<SizeofIntHashEntry, SizeofStringHashEntry>(static_cast<uint32_t>(new_int_size), static_cast<uint32_t>(new_string_size));
+}
+
+template<class T>
+size_t array<T>::array_inner::estimate_size(int64_t &new_int_size, int64_t &new_string_size, bool is_vector) {
+  return array_size_estimate_helper<sizeof(T), sizeof(int_hash_entry), sizeof(string_hash_entry)>(new_int_size, new_string_size, is_vector);
 }
 
 template<class T>

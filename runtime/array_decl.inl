@@ -225,6 +225,9 @@ public:
   using iterator = array_iterator<T>;
   using const_iterator = array_iterator<const T>;
 
+  static constexpr size_t SizeofArrayInner = sizeof(array_inner);
+  static constexpr size_t SizeofInnerFieldsForMap = sizeof(array_inner_fields_for_map);
+
   inline array() __attribute__ ((always_inline));
 
   inline explicit array(const array_size &s) __attribute__ ((always_inline));
