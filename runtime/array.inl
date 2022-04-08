@@ -729,13 +729,18 @@ void array<T>::mutate_if_vector_needed_int() {
   }
 }
 
+__attribute__((noinline))
+inline void critical_error_vector_overflow(int64_t int_size) {
+  php_critical_error ("max array size exceeded: int_size = %" PRIi64, int_size);
+}
+
 template<class T>
 void array<T>::mutate_to_size(int64_t int_size) {
   if (mutate_to_size_if_vector_shared(int_size)) {
     return;
   }
   if (unlikely(int_size > array_inner::MAX_HASHTABLE_SIZE)) {
-    php_critical_error ("max array size exceeded: int_size = %" PRIi64, int_size);
+    critical_error_vector_overflow(int_size);
   }
   const auto new_int_buff_size = static_cast<uint32_t>(int_size);
   p = static_cast<array_inner *>(dl::reallocate(p, p->sizeof_vector(new_int_buff_size), p->sizeof_vector(p->int_buf_size)));
