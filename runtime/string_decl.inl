@@ -222,3 +222,9 @@ inline string::size_type max_string_size(const array<T> &) __attribute__((always
 
 template<class T>
 inline string::size_type max_string_size(const Optional<T> &v) __attribute__((always_inline));
+
+string string_concat2(const string &s1, const string &s2) noexcept;
+string string_concat3(const string &s1, const string &s2, const string &s3) noexcept;
+string string_concat4(const string &s1, const string &s2, const string &s3, const string &s4) noexcept;
+string string_concat5(const string &s1, const string &s2, const string &s3, const string &s4, const string &s5) noexcept;
+string string_concat2si(const string &x, int64_t y) noexcept;

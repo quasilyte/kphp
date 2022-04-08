@@ -1290,16 +1290,30 @@ static bool can_save_ref(VertexPtr v) {
 }
 
 void compile_string_build_as_string(VertexAdaptor<op_string_build> root, CodeGenerator &W) {
+  if (root->size() == 2) {
+    const auto *x_type = tinf::get_type(root->args()[0]);
+    const auto *y_type = tinf::get_type(root->args()[1]);
+    if (!x_type->use_optional() && !y_type->use_optional() && x_type->ptype() == tp_string && y_type->ptype() == tp_int) {
+      W << "string_concat2si(" << root->args()[0] << ", " << root->args()[1] << ")";
+      return;
+    }
+  }
+
   std::vector<StrlenInfo> info(root->size());
   bool ok = true;
   bool was_dynamic = false;
   bool was_object = false;
+  int num_string_args = 0;
   int static_length = 0;
   int ii = 0;
   for (auto i : root->args()) {
     info[ii].v = i;
     VertexPtr value = GenTree::get_actual_value(i);
     const TypeData *type = tinf::get_type(value);
+
+    if (type->ptype() == tp_string && !type->use_optional()) {
+      num_string_args++;
+    }
 
     int value_length = type_strlen(type);
     if (value_length == STRLEN_ERROR) {
@@ -1336,6 +1350,28 @@ void compile_string_build_as_string(VertexAdaptor<op_string_build> root, CodeGen
   }
   if (!ok) {
     return;
+  }
+
+  if (num_string_args == root->args().size()) {
+    const char *concat_func = nullptr;
+    switch (num_string_args) {
+      case 2:
+        concat_func = "string_concat2";
+        break;
+      case 3:
+        concat_func = "string_concat3";
+        break;
+      case 4:
+        concat_func = "string_concat4";
+        break;
+      case 5:
+        concat_func = "string_concat5";
+        break;
+    }
+    if (concat_func) {
+      W << concat_func << "(" << JoinValues(root->args(), ", ") << ")";
+      return;
+    }
   }
 
   bool complex_flag = was_dynamic || was_object;
